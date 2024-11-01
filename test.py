@@ -2,19 +2,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 start = (0, 10)
-end_z = 0
+ground_z = 0
+roof_z = 3
+max_raw_depth = 27
 
 # Number of radial lines
-n_lines = 8
-# Calculate angles_x for each line between 3.75 and 5.5 o'clock in radians
-angles_x = np.linspace(3.75 * np.pi / 6, 5.5 * np.pi / 6, n_lines)
-angles_y = np.linspace(3.75 * np.pi / 6, 5.5 * np.pi / 6, n_lines)
+n_lines_y_img = 12
+n_lines_x_img = 16
+# Calculate angles_y for each line between 3.75 and 5.5 o'clock in radians
+angles_y = np.linspace(-0.75 * np.pi / 6, -2.25 * np.pi / 6, n_lines_y_img)
+angles_z = np.linspace(-1 * np.pi / 6, 1 * np.pi / 6, n_lines_x_img)
 
 # Start and end points for each line
-end_points = [((start[0] + (end_z - start[1]) * np.tan(angle_x)), end_z) for angle_x, angles_y in zip(angles_x, angles_y)]
+ground_end_points = [((start[0] + (ground_z - start[1]) * np.tan(angle_y)), ground_z) for angle_y in angles_y]
+end_points = []
+ground_end_point_dists = [np.sqrt((start[0]-gep[0])**2 + (start[1]-gep[1])**2) for gep in ground_end_points]
+for gepd, gep in zip(ground_end_point_dists, ground_end_points):
+    ptx = start[0] + (max_raw_depth/gepd)*(gep[0]-start[0])
+    pty = start[1] + (max_raw_depth/gepd)*(gep[1]-start[1])
+    end_points.append((ptx, pty))
 
 # Generate 8 random values between 0 and 1, each associated with a blue line
-random_values = np.random.rand(n_lines)
+random_values = np.random.rand(n_lines_y_img)
 
 # Calculate red points based on random values (interpolation between start and end points)
 raw_depth_points = [
@@ -47,7 +56,7 @@ distance_range = farthest_distance - nearest_distance
 
 in_roof_normalized_points = []
 inRoNoPoDistances = []
-for end, dist in zip(end_points, distances):
+for end, dist in zip(ground_end_points, distances):
     # Normalize the z-coordinate for the black point between z=3 and z=0
     y_black = 3 - (3 * (dist - nearest_distance) / distance_range)
     
@@ -61,10 +70,13 @@ for end, dist in zip(end_points, distances):
 # Plot setup
 plt.figure(figsize=(6, 6))
 plt.xlim(-1, 25)
-plt.ylim(-2, 12)
+plt.ylim(-20, 12)
 
 # Draw each radial line using start and end points
 for end in end_points:
+    plt.plot([start[0], end[0]], [start[1], end[1]], color="yellow")
+
+for end in ground_end_points:
     plt.plot([start[0], end[0]], [start[1], end[1]], color="blue")
 
 # Plot the red points on each blue line based on the random values
