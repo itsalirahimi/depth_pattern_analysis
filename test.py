@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-start = (0, 10)
+start = (0, 0, 10)
 ground_z = 0
 roof_z = 3
 max_raw_depth = 27
@@ -14,58 +14,91 @@ angles_y = np.linspace(-0.75 * np.pi / 6, -2.25 * np.pi / 6, n_lines_y_img)
 angles_z = np.linspace(-1 * np.pi / 6, 1 * np.pi / 6, n_lines_x_img)
 
 # Start and end points for each line
-ground_end_points = [((start[0] + (ground_z - start[1]) * np.tan(angle_y)), ground_z) for angle_y in angles_y]
-end_points = []
-ground_end_point_dists = [np.sqrt((start[0]-gep[0])**2 + (start[1]-gep[1])**2) for gep in ground_end_points]
-for gepd, gep in zip(ground_end_point_dists, ground_end_points):
-    ptx = start[0] + (max_raw_depth/gepd)*(gep[0]-start[0])
-    pty = start[1] + (max_raw_depth/gepd)*(gep[1]-start[1])
-    end_points.append((ptx, pty))
+ground_end_points = [((), start[2], ground_z) for angle_y in angles_y]
 
-# Generate 8 random values between 0 and 1, each associated with a blue line
-random_values = np.random.rand(n_lines_y_img)
+# ^ z axis
+# |
+# Center 
+#   \
+#    \ 
+#     \     ^
+#      \     \
+#       \ line_length
+#        \     \
+#         \     v
+#          \
+#  _________\
+#  <-xdiff-> ^
+#            |
+#      x_radial_tick
+# --------------------------> x axis
+#
 
-# Calculate red points based on random values (interpolation between start and end points)
-raw_depth_points = [
-    (
-        start[0] + r * (end[0] - start[0]),
-        start[1] + r * (end[1] - start[1])
-    )
-    for end, r in zip(end_points, random_values)
-]
+# Generate random values between 0 and 1, each associated with a pixel
+random_values = np.random.rand(n_lines_y_img*n_lines_x_img)
+k = 0
+ground_end_points = np.zeros((n_lines_y_img, n_lines_x_img))
+raw_depth_points = np.zeros((n_lines_y_img, n_lines_x_img))
+in_roof_normalized_points = np.zeros((n_lines_y_img, n_lines_x_img))
+# ground_end_point_dists = np.zeros((n_lines_y_img, n_lines_x_img))
+ground_end_point_dists = []
+# raw_end_points = np.zeros((n_lines_y_img, n_lines_x_img))
+raw_end_points = []
+nearest_distance = 1e9
+farthest_distance = -1
+for i, angle_y in enumerate(angles_y):
+    x_diff = (ground_z - start[2]) * np.tan(angle_y)
+    # x_radial_tick = start[0] + x_diff
+    # line_length = np.sqrt((x_diff)**2 + (ground_z - start[2])**2)
+    for j, angle_z in enumerate(angles_z):
+        x_diff_project_x = x_diff*np.cos(angle_z)
+        x_diff_project_y = x_diff*np.sin(angle_z)
+        gepx = start[0]+x_diff_project_x
+        gepy = start[1]+x_diff_project_y
+        gepz = ground_z
+        ground_end_points[i,j] = (gepx, gepy, gepz)
+        # ground_end_point_dists[i,j] = np.sqrt(x_diff_project_x**2 + x_diff_project_y**2 + (start[2]-ground_z)**2)
+        dist = np.sqrt(x_diff_project_x**2 + x_diff_project_y**2 + (start[2]-ground_z)**2)
+        ground_end_point_dists.append(dist)
+        raw_end_pointx = start[0]+(max_raw_depth/dist)*(gepx-start[0])
+        raw_end_pointy = start[1]+(max_raw_depth/dist)*(gepy-start[1])
+        raw_end_pointz = start[2]+(max_raw_depth/dist)*(gepz-start[2])
+        raw_end_points[i,j] = (raw_end_pointx, raw_end_pointy, raw_end_pointz)
+        r = random_values[k]
+        k += 1
+        # Calculate raw depth points based on random values (interpolation between start and end points)
+        rdpx = start[0] + r * (raw_end_pointx - start[0])
+        rdpy = start[1] + r * (raw_end_pointy - start[1])
+        rdpz = start[2] + r * (raw_end_pointz - start[2])
+        raw_depth_points[i,j] = (rdpx, rdpy, rdpz)
+        rdp_dist = np.sqrt((rdpx-start[0])**2 + (rdpy-start[1])**2 + (rdpz-start[2])**2)
+        if rdp_dist < nearest_distance:
+            nearest_distance = rdp_dist
+            nearest_rdp = raw_depth_points[i,j]
+        if rdp_dist > farthest_distance:
+            farthest_distance = rdp_dist
+            farthest_point = raw_depth_points[i,j]
 
-rdpDistances = []
-for rdp in raw_depth_points:
-    dist = np.sqrt((rdp[0]-start[0])**2 + (rdp[1]-start[1])**2)
-    rdpDistances.append(dist)
-    print("rdp data: ", rdp, dist)
-
-# Calculate distances of each red point from the start
-distances = [np.sqrt((point[0] - start[0])**2 + (point[1] - start[1])**2) for point in raw_depth_points]
-
-# Identify the nearest and the farthest points
-nearest_index = np.argmin(distances)
-farthest_index = np.argmax(distances)
-nearest_point = raw_depth_points[nearest_index]
-farthest_point = raw_depth_points[farthest_index]
-nearest_distance = distances[nearest_index]
-farthest_distance = distances[farthest_index]
-
-# Adjust black points so the nearest point is at z=3 and the farthest is at z=0
+# Adjust irn points so the nearest point is at z=roof_z and the farthest is at z=ground_z
 distance_range = farthest_distance - nearest_distance
 
-in_roof_normalized_points = []
-inRoNoPoDistances = []
+irn_points = np.zeros((n_lines_y_img, n_lines_x_img)) # in roof normalized points
+irn_dists = []
+
+for i, angle_y in enumerate(angles_y):
+    for j, angle_z in enumerate(angles_z):
+        y_black = roof_z - (roof_z * (dist - nearest_distance) / distance_range)
+
+
 for end, dist in zip(ground_end_points, distances):
-    # Normalize the z-coordinate for the black point between z=3 and z=0
-    y_black = 3 - (3 * (dist - nearest_distance) / distance_range)
+    # Normalize the z-coordinate for the black point between z=roof_z and z=0
     
     # Interpolate the x-coordinate to stay on the line
-    ratio = (y_black - start[1]) / (end[1] - start[1])  # Interpolation ratio for x
+    ratio = (y_black - start[2]) / (end[1] - start[2])  # Interpolation ratio for x
     x_black = start[0] + ratio * (end[0] - start[0])
     
     in_roof_normalized_points.append((x_black, y_black))
-    inRoNoPoDistances.append(np.sqrt((x_black-start[0])**2 + (y_black-start[1])**2))
+    inRoNoPoDistances.append(np.sqrt((x_black-start[0])**2 + (y_black-start[2])**2))
 
 # Plot setup
 plt.figure(figsize=(6, 6))
@@ -74,10 +107,10 @@ plt.ylim(-20, 12)
 
 # Draw each radial line using start and end points
 for end in end_points:
-    plt.plot([start[0], end[0]], [start[1], end[1]], color="yellow")
+    plt.plot([start[0], end[0]], [start[2], end[1]], color="yellow")
 
 for end in ground_end_points:
-    plt.plot([start[0], end[0]], [start[1], end[1]], color="blue")
+    plt.plot([start[0], end[0]], [start[2], end[1]], color="blue")
 
 # Plot the red points on each blue line based on the random values
 for i, point in enumerate(raw_depth_points):
