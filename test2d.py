@@ -38,7 +38,6 @@ rdpDistances = []
 for rdp in raw_depth_points:
     dist = np.sqrt((rdp[0]-start[0])**2 + (rdp[1]-start[1])**2)
     rdpDistances.append(dist)
-    print("rdp data: ", rdp, dist)
 
 # Calculate distances of each red point from the start
 distances = [np.sqrt((point[0] - start[0])**2 + (point[1] - start[1])**2) for point in raw_depth_points]
