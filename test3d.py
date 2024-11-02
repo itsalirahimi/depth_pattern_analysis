@@ -2,28 +2,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils import *
 
-qdata = resized_imread('00000004.png', 0.0625) 
-qdata = normalize_array(qdata)
-
-# mesh2d = np.zeros(qdata.shape)
-
-# mesh2d[5:10, 6:11] = 1
-
-# for i in range(qdata.shape[0]):
-#     for j in range(qdata.shape[1]):
-#         mesh[i,j,]
-
-print(qdata.shape)
-npimshow(qdata, "an image")
-
 start = np.array([0, 0, 10])
 ground_z = 0
 roof_z = 3
 max_raw_depth = 27
 
-# Number of radial lines
-n_lines_y_img = qdata.shape[0]
-n_lines_x_img = qdata.shape[1]
+
+n_lines_y_img = 21
+n_lines_x_img = 28
 # Calculate angles_y for each line between 3.75 and 5.5 o'clock in radians
 angles_y = np.linspace(-0.75 * np.pi / 6, -2.25 * np.pi / 6, n_lines_y_img)
 angles_z = np.linspace(-1 * np.pi / 6, 1 * np.pi / 6, n_lines_x_img)
@@ -32,6 +18,7 @@ max_gep_dist = -1
 ground_end_points = np.zeros((n_lines_y_img, n_lines_x_img, 3))
 mesh = np.zeros((n_lines_y_img, n_lines_x_img, 3))
 gep_dists = np.zeros((n_lines_y_img, n_lines_x_img))
+mesh_dists = np.zeros((n_lines_y_img, n_lines_x_img))
 for i, angle_y in enumerate(angles_y):
     x_diff = (ground_z - start[2]) * np.tan(angle_y)
     # x_radial_tick = start[0] + x_diff
@@ -54,6 +41,16 @@ for i, angle_y in enumerate(angles_y):
             mesh[i,j,2] = 2
         else:
             mesh[i,j,2] = 0
+        mesh_dists[i,j] = get_euc_dist(mesh[i,j,:], start)
+
+qdata = normalize_array(mesh_dists)
+npimshow(qdata, "img")
+gepd = normalize_array(gep_dists)
+npimshow(gepd, "imgq")
+
+# Number of radial lines
+n_lines_y_img = qdata.shape[0]
+n_lines_x_img = qdata.shape[1]
 
 # ^ z axis
 # |
@@ -159,10 +156,10 @@ all_irnp_zs = []
 #         ax.plot([start[0], ground_end_points[i,j,0]], [start[1], ground_end_points[i,j,1]], [start[2], ground_end_points[i,j,2]], color='blue')
 #         # ax.plot([start[0], raw_end_points[i,j,0]], [start[1], raw_end_points[i,j,1]], [start[2], raw_end_points[i,j,2]], color='yellow')
 
-ax.scatter(raw_depth_points[:,:,0], raw_depth_points[:,:,1], raw_depth_points[:,:,2], color = 'red')
-ax.scatter(irn_points_1[:,:,0], irn_points_1[:,:,1], irn_points_1[:,:,2], color = 'black')
-ax.scatter(irn_points_2[:,:,0], irn_points_2[:,:,1], irn_points_2[:,:,2], color = 'purple')
-ax.scatter(tilt_corrected_depth_points[:,:,0], tilt_corrected_depth_points[:,:,1], tilt_corrected_depth_points[:,:,2], color='green')
+# ax.scatter(raw_depth_points[:,:,0], raw_depth_points[:,:,1], raw_depth_points[:,:,2], color = 'red')
+# ax.scatter(irn_points_1[:,:,0], irn_points_1[:,:,1], irn_points_1[:,:,2], color = 'black')
+# ax.scatter(irn_points_2[:,:,0], irn_points_2[:,:,1], irn_points_2[:,:,2], color = 'purple')
+# ax.scatter(tilt_corrected_depth_points[:,:,0], tilt_corrected_depth_points[:,:,1], tilt_corrected_depth_points[:,:,2], color='green')
 # ax.scatter(mesh[:,:,0], mesh[:,:,1], mesh[:,:,2], color='green')
 # ax.scatter(mesh[:,:])
 
