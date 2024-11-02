@@ -1,6 +1,28 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+def npimshow(data, text):
+    plt.figure()
+    # Normalize the array to 0-255 range
+    normalized_data = 255 * (data - np.min(data)) / (np.max(data) - np.min(data))
+
+    # Display the array using imshow
+    plt.imshow(normalized_data, cmap='gray', vmin=0, vmax=255)
+
+    plt.colorbar()  # Adds a color scale bar
+    plt.title(text)
+
+from scipy.ndimage import zoom
+def resized_imread(path, r):
+    # Read the image using matplotlib
+    data = plt.imread(path)  # Replace with your image file path
+    # Resize the image to 1/4 of its original size using scipy.ndimage.zoom
+    return zoom(data, (r, r))  # (0.25, 0.25) for spatial dimensions, 1 for color channels
+
+qdata = resized_imread('00000004.png', 0.125) 
+print(qdata.shape)
+npimshow(qdata, "an image")
+
 start = (0, 0, 10)
 ground_z = 0
 roof_z = 3
@@ -43,7 +65,7 @@ rdp_dists = np.zeros((n_lines_y_img, n_lines_x_img))
 # ground_end_point_dists = np.zeros((n_lines_y_img, n_lines_x_img))
 ground_end_point_dists = []
 # raw_end_points = np.zeros((n_lines_y_img, n_lines_x_img))
-raw_end_points = []
+raw_end_points = np.zeros((n_lines_y_img, n_lines_x_img, 3))
 nearest_distance = 1e9
 farthest_distance = -1
 for i, angle_y in enumerate(angles_y):
@@ -105,73 +127,37 @@ for i, angle_y in enumerate(angles_y):
         irn_dists[i,j] = np.sqrt((x-start[0])**2 + (y-start[1])**2 + (z-start[2])**2)
 
 # Plot setup
-plt.figure(figsize=(6, 6))
-# plt.xlim(-1, 25)
+# ax = fig.add_subplot(2, 1, 2, projection='3d')
 # plt.ylim(-20, 12)
 
-all_gep_xs = []
-all_gep_ys = []
-for i in range(ground_end_points.shape[0]):
-    for j in range(ground_end_points.shape[1]):
-        all_gep_xs.append(ground_end_points[i,j,0])
-        all_gep_ys.append(ground_end_points[i,j,1])
+# from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
 
-plt.scatter(all_gep_xs, all_gep_ys)
-# # Draw each radial line using start and end points
-# for end in end_points:
-#     plt.plot([start[0], end[0]], [start[2], end[1]], color="yellow")
+# fig = plt.figure()
+# ax = fig.gca(projection='3d')
+# ax2 = fig.gca()
 
-# for end in ground_end_points:
-#     plt.plot([start[0], end[0]], [start[2], end[1]], color="blue")
+# all_rdp_xs = []
+# all_rdp_ys = []
+# all_rdp_zs = []
+# all_irnp_xs = []
+# all_irnp_ys = []
+# all_irnp_zs = []
+# for i in range(ground_end_points.shape[0]):
+#     for j in range(ground_end_points.shape[1]):
+#         ax.plot([start[0], ground_end_points[i,j,0]], [start[1], ground_end_points[i,j,1]], [start[2], ground_end_points[i,j,2]], color='blue')
+#         ax.plot([start[0], raw_end_points[i,j,0]], [start[1], raw_end_points[i,j,1]], [start[2], raw_end_points[i,j,2]], color='yellow')
+#         all_rdp_xs.append(raw_depth_points[i,j,0])
+#         all_rdp_ys.append(raw_depth_points[i,j,1])
+#         all_rdp_zs.append(raw_depth_points[i,j,2])
+#         all_irnp_xs.append(irn_points[i,j,0])
+#         all_irnp_ys.append(irn_points[i,j,1])
+#         all_irnp_zs.append(irn_points[i,j,2])
 
-# # Plot the red points on each blue line based on the random values
-# for i, point in enumerate(raw_depth_points):
-#     color = 'green' if i == nearest_index else 'purple' if i == farthest_index else 'red'
-#     plt.plot(point[0], point[1], 'o', color=color)
+# ax.scatter(all_rdp_xs, all_rdp_ys, all_rdp_zs, color = 'red')
+# ax.scatter(all_irnp_xs, all_irnp_ys, all_irnp_zs, color = 'black')
 
-# # Plot the black points on each line according to normalized distance placement
-# for black_point in in_roof_normalized_points:
-#     plt.plot(black_point[0], black_point[1], 'ko')  # black points
-
-# ax = plt.gca()
-# ax.set_aspect('equal', adjustable='box')
-# # Show the plot
-# plt.xlabel("X-axis")
-# plt.ylabel("Y-axis")
-# plt.title("Radial Lines with Normalized Black Points Along Same Lines")
-# plt.grid(True)
-
-
-# def normalize(numbers):
-#     # Convert the input list to a NumPy array
-#     arr = np.array(numbers)
-    
-#     # Calculate the minimum and maximum values of the array
-#     min_val = np.min(arr)
-#     max_val = np.max(arr)
-    
-#     # Apply min-max normalization
-#     normalized_arr = (arr - min_val) / (max_val - min_val)
-    
-#     return normalized_arr
-
-
-# x = np.arange(len(rdpDistances))  # the label locations
-# width = 0.35  # the width of the bars
-
-# # Create the bar chart
-# fig, ax = plt.subplots()
-# bars1 = ax.bar(x - width/2, rdpDistances, width, label='raw depth', color='red')
-# bars2 = ax.bar(x + width/2, inRoNoPoDistances, width, label='in-roof normalized depth', color='blue')
-
-# # Add some text for labels, title and custom x-axis tick labels, etc.
-# ax.set_ylabel('Values')
-# ax.set_title('Comparison of Two Sets of Values')
-# ax.set_xticks(x)
-# ax.legend()
+npimshow(rdp_dists, "rdp")
+npimshow(irn_dists, "irnp")
 
 plt.show()
 
-# # Print distances of the nearest and farthest points
-# print(f"Nearest distance: {nearest_distance}")
-# print(f"Farthest distance: {farthest_distance}")
