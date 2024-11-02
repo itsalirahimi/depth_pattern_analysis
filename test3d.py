@@ -19,7 +19,24 @@ def resized_imread(path, r):
     # Resize the image to 1/4 of its original size using scipy.ndimage.zoom
     return zoom(data, (r, r))  # (0.25, 0.25) for spatial dimensions, 1 for color channels
 
-qdata = resized_imread('00000004.png', 0.125) 
+def normalize_array(arr):
+    """
+    Normalizes a 2D NumPy array so that its values are between 0 and 1.
+    The maximum value will be 1 and the minimum value will be 0.
+    
+    Parameters:
+    arr (numpy.ndarray): 2D array to normalize
+
+    Returns:
+    numpy.ndarray: Normalized 2D array with values between 0 and 1
+    """
+    min_val = np.min(arr)
+    max_val = np.max(arr)
+    normalized_arr = (arr - min_val) / (max_val - min_val)
+    return normalized_arr
+
+qdata = resized_imread('00000004.png', 0.0625) 
+qdata = normalize_array(qdata)
 print(qdata.shape)
 npimshow(qdata, "an image")
 
@@ -29,14 +46,11 @@ roof_z = 3
 max_raw_depth = 27
 
 # Number of radial lines
-n_lines_y_img = 12
-n_lines_x_img = 16
+n_lines_y_img = qdata.shape[0]
+n_lines_x_img = qdata.shape[1]
 # Calculate angles_y for each line between 3.75 and 5.5 o'clock in radians
 angles_y = np.linspace(-0.75 * np.pi / 6, -2.25 * np.pi / 6, n_lines_y_img)
 angles_z = np.linspace(-1 * np.pi / 6, 1 * np.pi / 6, n_lines_x_img)
-
-# Start and end points for each line
-ground_end_points = [((), start[2], ground_z) for angle_y in angles_y]
 
 # ^ z axis
 # |
@@ -57,7 +71,7 @@ ground_end_points = [((), start[2], ground_z) for angle_y in angles_y]
 #
 
 # Generate random values between 0 and 1, each associated with a pixel
-random_values = np.random.rand(n_lines_y_img*n_lines_x_img)
+# random_values = np.random.rand(n_lines_y_img*n_lines_x_img)
 k = 0
 ground_end_points = np.zeros((n_lines_y_img, n_lines_x_img, 3))
 raw_depth_points = np.zeros((n_lines_y_img, n_lines_x_img, 3))
@@ -90,7 +104,7 @@ for i, angle_y in enumerate(angles_y):
         raw_end_points[i,j,0] = raw_end_pointx
         raw_end_points[i,j,1] = raw_end_pointy
         raw_end_points[i,j,2] = raw_end_pointz
-        r = random_values[k]
+        r = qdata[i,j]
         k += 1
         # Calculate raw depth points based on random values (interpolation between start and end points)
         rdpx = start[0] + r * (raw_end_pointx - start[0])
@@ -127,34 +141,31 @@ for i, angle_y in enumerate(angles_y):
         irn_dists[i,j] = np.sqrt((x-start[0])**2 + (y-start[1])**2 + (z-start[2])**2)
 
 # Plot setup
-# ax = fig.add_subplot(2, 1, 2, projection='3d')
-# plt.ylim(-20, 12)
+from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
 
-# from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+ax2 = fig.gca()
 
-# fig = plt.figure()
-# ax = fig.gca(projection='3d')
-# ax2 = fig.gca()
+all_rdp_xs = []
+all_rdp_ys = []
+all_rdp_zs = []
+all_irnp_xs = []
+all_irnp_ys = []
+all_irnp_zs = []
+for i in range(ground_end_points.shape[0]):
+    for j in range(ground_end_points.shape[1]):
+        ax.plot([start[0], ground_end_points[i,j,0]], [start[1], ground_end_points[i,j,1]], [start[2], ground_end_points[i,j,2]], color='blue')
+        # ax.plot([start[0], raw_end_points[i,j,0]], [start[1], raw_end_points[i,j,1]], [start[2], raw_end_points[i,j,2]], color='yellow')
+        all_rdp_xs.append(raw_depth_points[i,j,0])
+        all_rdp_ys.append(raw_depth_points[i,j,1])
+        all_rdp_zs.append(raw_depth_points[i,j,2])
+        all_irnp_xs.append(irn_points[i,j,0])
+        all_irnp_ys.append(irn_points[i,j,1])
+        all_irnp_zs.append(irn_points[i,j,2])
 
-# all_rdp_xs = []
-# all_rdp_ys = []
-# all_rdp_zs = []
-# all_irnp_xs = []
-# all_irnp_ys = []
-# all_irnp_zs = []
-# for i in range(ground_end_points.shape[0]):
-#     for j in range(ground_end_points.shape[1]):
-#         ax.plot([start[0], ground_end_points[i,j,0]], [start[1], ground_end_points[i,j,1]], [start[2], ground_end_points[i,j,2]], color='blue')
-#         ax.plot([start[0], raw_end_points[i,j,0]], [start[1], raw_end_points[i,j,1]], [start[2], raw_end_points[i,j,2]], color='yellow')
-#         all_rdp_xs.append(raw_depth_points[i,j,0])
-#         all_rdp_ys.append(raw_depth_points[i,j,1])
-#         all_rdp_zs.append(raw_depth_points[i,j,2])
-#         all_irnp_xs.append(irn_points[i,j,0])
-#         all_irnp_ys.append(irn_points[i,j,1])
-#         all_irnp_zs.append(irn_points[i,j,2])
-
-# ax.scatter(all_rdp_xs, all_rdp_ys, all_rdp_zs, color = 'red')
-# ax.scatter(all_irnp_xs, all_irnp_ys, all_irnp_zs, color = 'black')
+ax.scatter(all_rdp_xs, all_rdp_ys, all_rdp_zs, color = 'red')
+ax.scatter(all_irnp_xs, all_irnp_ys, all_irnp_zs, color = 'black')
 
 npimshow(rdp_dists, "rdp")
 npimshow(irn_dists, "irnp")
