@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 def get_unit_vec(vec):
     return vec / np.linalg.norm(vec)
@@ -210,8 +211,14 @@ def get_all_from_dists_2d(start, geps, dists):
     return out
 
 def get_relative_midpoint_3d(start, end, ratio):
-    return np.array((start[0] + ratio * (end[0] - start[0]),  start[1] + ratio * (end[1] - start[1]), 
-            start[2] + ratio * (end[2] - start[2])))
+    # print(start)
+    # print(end)
+    # print(ratio)
+    # print(np.array((start[0] + ratio * (end[0] - start[0]),  start[1] + ratio * (end[1] - start[1]), 
+    #         start[2] + ratio * (end[2] - start[2]))))
+    # time.sleep(1000)
+    return np.array([start[0] + ratio * (end[0] - start[0]),  start[1] + ratio * (end[1] - start[1]), 
+            start[2] + ratio * (end[2] - start[2])])
 
 def perform_tilt_correction_3d(start, raw_depth_points, max_gep_dist, gep_dists):
     tilt_corrected_depth_points = np.zeros(raw_depth_points.shape)

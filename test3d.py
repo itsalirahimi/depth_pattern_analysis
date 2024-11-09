@@ -45,7 +45,7 @@ for i, angle_y in enumerate(angles_y):
         ground_end_points[i,j,0] = gepx
         ground_end_points[i,j,1] = gepy
         ground_end_points[i,j,2] = gepz
-        gep_dists[i,j] = get_euc_dist((gepx, gepy, gepz), start)
+        gep_dists[i,j] = get_euc_dist_3d((gepx, gepy, gepz), start)
         if max_gep_dist < gep_dists[i,j]:
             max_gep_dist = gep_dists[i,j]
         mesh[i,j,0] = gepx
@@ -98,7 +98,7 @@ for i, angle_y in enumerate(angles_y):
         repy = start[1]+x_diff_roof_project_y
         repz = roof_z
         # normalized_gep_dists[i,j] = get_euc_dist((gepx, gepy, gepz), start)
-        rep_dists[i,j] = get_euc_dist((repx, repy, repz), start)
+        rep_dists[i,j] = get_euc_dist_3d((repx, repy, repz), start)
 
         # ground_end_point_dists[i,j] = np.sqrt(x_diff_project_x**2 + x_diff_project_y**2 + (start[2]-ground_z)**2)
         gepx = ground_end_points[i,j,0]
@@ -120,7 +120,7 @@ for i, angle_y in enumerate(angles_y):
         raw_depth_points[i,j,0] = rdpx
         raw_depth_points[i,j,1] = rdpy
         raw_depth_points[i,j,2] = rdpz
-        rdp_dist = get_euc_dist((rdpx, rdpy, rdpz), start)
+        rdp_dist = get_euc_dist_3d((rdpx, rdpy, rdpz), start)
         
 # min_ngep_dist = np.min(normalized_gep_dists)
 # max_ngep_dist = np.max(normalized_gep_dists)
