@@ -4,11 +4,14 @@ import numpy as np
 def get_unit_vec(vec):
     return vec / np.linalg.norm(vec)
 
-def get_euc_dist(pt1, pt2):
-    return np.sqrt((pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2 + (pt1[2]-pt2[2])**2)
+# def get_euc_dist(pt1, pt2):
+#     return np.sqrt((pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2 + (pt1[2]-pt2[2])**2)
 
 def get_euc_dist_2d(pt1, pt2):
     return np.sqrt((pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2)
+
+def get_euc_dist_3d(pt1, pt2):
+    return np.sqrt((pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2 + (pt1[2]-pt2[2])**2)
 
 def npimshow(data, text):
     plt.figure()
@@ -23,6 +26,13 @@ def npimshow(data, text):
 
 def get_euc_dists_2d(start, points):
     return [get_euc_dist_2d(p, start) for p in points]
+
+def get_euc_dists_3d(start, points):
+    dists = np.zeros((points.shape[0], points.shape[1]))
+    for i in range(points.shape[0]):
+        for j in range(points.shape[1]):
+            dists[i,j] = get_euc_dist_3d(points[i,j], start)
+    return dists
 
 def perform_tilt_correction_2d(start, raw_depth_points, gep_dists):
     max_gep_dist = np.max(gep_dists)
@@ -60,7 +70,7 @@ def normalize_under_roof(_start, roof_z, ground_end_points, points):
     dists = np.zeros((points.shape[0], points.shape[1]))
     for i in range(points.shape[0]):
         for j in range(points.shape[1]):
-            dist = get_euc_dist(points[i,j,:], _start)
+            dist = get_euc_dist_3d(points[i,j,:], _start)
             dists[i,j] = dist
             if dist < nearest_distance:
                 nearest_distance = dist
@@ -82,7 +92,7 @@ def normalize_under_roof(_start, roof_z, ground_end_points, points):
             x = _start[0] + ratio * (ground_end_points[i,j][0] - _start[0])
             y = _start[1] + ratio * (ground_end_points[i,j][1] - _start[1])
             irn_points[i,j,:] = [x,y,z]
-            irn_dists[i,j] = get_euc_dist((x,y,z), _start)
+            irn_dists[i,j] = get_euc_dist_3d((x,y,z), _start)
     
     return irn_points, irn_dists
 
@@ -158,14 +168,23 @@ def calc_derivative(xs, ys, ret_array=False):
     else:
         return dys
 
+# def calc_integration(xs, ys, initial_value=0):
+#     assert len(xs) == len(ys)
+#     sys = [initial_value]
+#     sum = initial_value
+#     for k in range(1, len(ys)):
+#         sum += ((ys[k] + ys[k-1]) / 2) * (xs[k] - xs[k-1])
+#         sys.append(sum)
+#     return np.array(sys)
+
 def calc_integration(xs, ys, initial_value=0):
-    assert len(xs) == len(ys)
-    sys = []
+    assert len(xs) == len(ys) + 1  # xs should be one element longer than ys
+    sys = [initial_value]
     sum = initial_value
-    for k in range(1, len(ys)):
-        sum += ((ys[k] + ys[k-1]) / 2) * (xs[k] - xs[k-1])
+    for k in range(len(ys)):
+        sum += ((ys[k] + ys[k-1]) / 2) * (xs[k+1] - xs[k])
         sys.append(sum)
-    return sys
+    return np.array(sys)
 
 def get_relative_midpoint(start, end, ratio):
     return (start[0] + ratio * (end[0] - start[0]), start[1] + ratio * (end[1] - start[1]))
@@ -173,11 +192,38 @@ def get_relative_midpoint(start, end, ratio):
 def get_absolute_midpoint(start, end, dist):
     return np.array(start) + dist * get_unit_vec(np.array(end) - np.array(start))
 
-def remove_derivative_and_integrate(xs, set1, set2):
+def remove_derivative_and_integrate_1d(xs, set1, set2):
     d1 = calc_derivative(xs, set1, ret_array=True)
     d2 = calc_derivative(xs, set2, ret_array=True)
     corrected_d1 = d1 - d2
-    return calc_integration(xs[1:], corrected_d1, initial_value=set2[0])
+    out = calc_integration(xs, corrected_d1, initial_value=set2[0])
+    return out
 
 def get_all_from_dists(start, ground_end_points, dists):
     return [list(get_absolute_midpoint(start, point, dist)) for dist, point in zip(dists, ground_end_points)]
+
+def get_all_from_dists_2d(start, geps, dists):
+    out = np.zeros(geps.shape)
+    for i in range(geps.shape[0]):
+        for j in range(geps.shape[1]):
+            out[i,j,:] = get_absolute_midpoint(start, geps[i,j,:], dists[i,j])
+    return out
+
+def get_relative_midpoint_3d(start, end, ratio):
+    return np.array((start[0] + ratio * (end[0] - start[0]),  start[1] + ratio * (end[1] - start[1]), 
+            start[2] + ratio * (end[2] - start[2])))
+
+def perform_tilt_correction_3d(start, raw_depth_points, max_gep_dist, gep_dists):
+    tilt_corrected_depth_points = np.zeros(raw_depth_points.shape)
+    for i in range(raw_depth_points.shape[0]):
+        for j in range(raw_depth_points.shape[1]):
+            tilt_corrected_depth_points[i,j,:] = raw_depth_points[i,j,:] + \
+                (max_gep_dist - gep_dists[i,j]) * (get_unit_vec(raw_depth_points[i,j,:]-start))
+    return tilt_corrected_depth_points
+
+def remove_derivative_and_integrate_2d(xs, set1, set2):
+    assert(set1.shape == set2.shape)
+    corrected_data = np.zeros(set1.shape)
+    for j in range(set1.shape[1]):
+        corrected_data[:,j] = remove_derivative_and_integrate_1d(xs, set1[:,j], set2[:,j])
+    return corrected_data
