@@ -44,9 +44,11 @@ def plot_rotated_scaled_points(start_point, raw_depth_points, rdpDistances, colo
     plt.grid(True)
     
     # Plot the red target points
-    plt.plot([pt[0] for pt in raw_depth_points], [pt[1] for pt in raw_depth_points], 'o', color=colors[0], label="Red Points")
+    plt.plot([pt[0] for pt in raw_depth_points], [pt[1] for pt in raw_depth_points], 'o', 
+             color=colors[0], label="Red Points")
     # Plot the transformed black points
-    plt.plot([pt[0] for pt in transformed_points], [pt[1] for pt in transformed_points], 'o', color=colors[1], label="Black Points (Transformed)")
+    plt.plot([pt[0] for pt in transformed_points], [pt[1] for pt in transformed_points], 'o', 
+             color=colors[1], label="Black Points (Transformed)")
 
     plt.legend()
     plt.show()
