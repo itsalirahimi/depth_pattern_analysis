@@ -11,6 +11,14 @@ class GroundTruth2D:
         self.terrain_points = np.zeros((self.num_of_pix, 2))
         self.intersection_points = []  # Store all intersection points for plotting
         self.closest_points = []  # Store closest points for highlighting
+        self.distances = np.zeros((self.num_of_pix, 1))
+        self.normalized_distances = np.zeros((self.num_of_pix, 1))
+        self.max_gep = 0
+        self.compute_radial_lines()
+        self.generate_simple_terrain()
+        self.find_intersections()
+        self.get_distances()
+        self.normalize_and_map()
 
     def compute_radial_lines(self):
         fov_rad = np.deg2rad(self.fov_deg)
@@ -26,22 +34,25 @@ class GroundTruth2D:
             
             # Add the radial line endpoint
             self.radial_lines.append(((x_camera, y_camera), (x_intersect, 0)))
+
+        self.max_gep = np.sqrt((x_camera - self.radial_lines[-1][1][0])**2 + 
+                               (y_camera - self.radial_lines[-1][1][1])**2)
         
     def generate_simple_terrain(self):
         mid_start = self.num_of_pix // 2 - 50
         mid_end = self.num_of_pix // 2 + 50
         y_terrain = np.zeros(self.num_of_pix)
+        # num of px ~ 330
         y_terrain[50:100] = 3
         # y_terrain[300:320] = 2
-        # y_terrain[50:100] = 4
+        # y_terrain[150:200] = 4
 
         stx, _ = self.radial_lines[0][1]
         enx, _ = self.radial_lines[-1][1]
-        x_points = np.linspace(stx, enx, self.num_of_pix)
+        x_points = np.linspace(stx, enx+0.1, self.num_of_pix)
         for i in range(self.num_of_pix):
             self.terrain_points[i][0] = x_points[i]
             self.terrain_points[i][1] = y_terrain[i]
-
     def _line_intersection(self, p1, p2, q1, q2):
         """
         Check the intersection of two line segments (p1-p2 and q1-q2).
@@ -111,17 +122,27 @@ class GroundTruth2D:
         
         return intersections
 
-    def normalize_and_map(self, dist):
-        min_val = min(dist)
-        max_val = max(dist)
-        normalized_distances = [(d - min_val) / (max_val - min_val) for d in dist]
-        # maping
-        x_last_radial, y_last_radial = self.radial_lines[len(self.radial_lines)-1][1]
-        new_max = np.sqrt((self.camera_position[0] - x_last_radial)**2 + 
-                          (self.camera_position[1] - y_last_radial)**2)
-        self.mapped_distances = [d * new_max for d in normalized_distances]
+    def normalize_and_map(self):
+        
+        # max_gep --> 255
+        # dist --> x
+        # x = dist*255 / max_gep
+        for i in enumerate(self.distances):
+            self.normalized_distances[i[0]] = int(255 - ((i[1]*255) / self.max_gep))
+            # print (i[0], i[1], self.normalized_distances[i[0]])
     
+    def get_distances(self):
+        for i in enumerate(self.closest_points):
+            camera_x, camera_y = self.camera_position
+            self.distances[i[0]] = np.sqrt((camera_x - i[1][0])**2 + (camera_y - i[1][1])**2)
+        return self.distances
 
+    def get_depth_data(self):
+        temp_array = []
+        for i in self.normalized_distances:
+            temp_array.append(int(i))
+        return temp_array
+    
     def plot(self):
         plt.figure(figsize=(8, 8))
 
@@ -164,6 +185,3 @@ class GroundTruth2D:
         plt.legend()
         plt.grid()
         plt.show()
-
-    def get_main_real_points(self):
-        return self.closest_points
