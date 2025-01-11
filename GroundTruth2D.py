@@ -1,58 +1,73 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from config import Config
 
 class GroundTruth2D:
-    def __init__(self, camera_position, theta, fov_deg, num_of_pix):
+    def __init__(self, camera_position, theta_deg, fov_deg, num_of_pix):
         self.camera_position = camera_position
-        self.theta = theta
+        self.theta_deg = theta_deg
         self.fov_deg = fov_deg
         self.num_of_pix = num_of_pix
         self.radial_lines = []
-        self.terrain_points = np.zeros((self.num_of_pix, 2))
-        self.intersection_points = []  # Store all intersection points for plotting
-        self.closest_points = []  # Store closest points for highlighting
+        self.terrain_points = np.zeros((self.num_of_pix + 2, 2))
+        self.intersection_points = []  # all intersection points for plotting
+        self.closest_points = []  # closest points for highlighting
         self.distances = np.zeros((self.num_of_pix, 1))
         self.normalized_distances = np.zeros((self.num_of_pix, 1))
         self.max_gep = 0
+        self.cfg = Config("config.yaml")
+    
+    def main(self):
         self.compute_radial_lines()
-        self.generate_simple_terrain()
+        self.terrain_generator()
         self.find_intersections()
         self.get_distances()
         self.normalize_and_map()
 
     def compute_radial_lines(self):
         fov_rad = np.deg2rad(self.fov_deg)
-        angles = np.linspace(self.theta - fov_rad / 2, self.theta + fov_rad / 2, self.num_of_pix)
+        theta_rad = np.deg2rad(self.theta_deg)
+        angles = np.linspace(theta_rad - (fov_rad/2), theta_rad + (fov_rad/2), self.num_of_pix)
         x_camera, y_camera = self.camera_position
         
         for angle in angles:
             if np.tan(angle) == 0:
                 continue
-            
             # Calculate intersection with the ground (y = 0)
+            # y - y_cam = m (x - x_cam) --> y = 0
+            # x_intersect = x_cam - y_cam/m
             x_intersect = x_camera - y_camera / np.tan(angle)
             
             # Add the radial line endpoint
             self.radial_lines.append(((x_camera, y_camera), (x_intersect, 0)))
 
+        # maximum ground end point length
         self.max_gep = np.sqrt((x_camera - self.radial_lines[-1][1][0])**2 + 
                                (y_camera - self.radial_lines[-1][1][1])**2)
         
-    def generate_simple_terrain(self):
-        mid_start = self.num_of_pix // 2 - 50
-        mid_end = self.num_of_pix // 2 + 50
+        self.observed_ground_distance = self.radial_lines[-1][1][0] - self.radial_lines[0][1][0]
+        self.max_ground_distance = y_camera
+
+    def terrain_generator(self):
         y_terrain = np.zeros(self.num_of_pix)
-        # num of px ~ 330
-        y_terrain[50:100] = 3
-        # y_terrain[300:320] = 2
-        # y_terrain[150:200] = 4
+        size_percentage = self.cfg.get("size_percentage")
+        height_percentage = self.cfg.get("height_percentage")
+        obstacle_position_percentage = self.cfg.get("obstacle_position_percentage")
+        mid_start = int(np.floor(obstacle_position_percentage*self.num_of_pix))
+        mid_end = int(mid_start + size_percentage*self.num_of_pix)
+        
+        y_terrain[mid_start:mid_end] = height_percentage * self.max_ground_distance
 
         stx, _ = self.radial_lines[0][1]
         enx, _ = self.radial_lines[-1][1]
         x_points = np.linspace(stx, enx+0.1, self.num_of_pix)
+        self.terrain_points[0][0] = x_points[0]
+        self.terrain_points[0][1] = 0
+        self.terrain_points[-1][0] = x_points[-1]
+        self.terrain_points[-1][1] = 0
         for i in range(self.num_of_pix):
-            self.terrain_points[i][0] = x_points[i]
-            self.terrain_points[i][1] = y_terrain[i]
+            self.terrain_points[i+1][0] = x_points[i]
+            self.terrain_points[i+1][1] = y_terrain[i]
     def _line_intersection(self, p1, p2, q1, q2):
         """
         Check the intersection of two line segments (p1-p2 and q1-q2).
@@ -147,7 +162,7 @@ class GroundTruth2D:
         plt.figure(figsize=(8, 8))
 
         # Plot camera position
-        plt.plot(self.camera_position[0], self.camera_position[1], 'ro', label="Camera Position")
+        plt.plot(self.camera_position[0], self.camera_position[1], 'bo', label="Camera Position")
 
         # Plot radial lines
         for line in self.radial_lines:
