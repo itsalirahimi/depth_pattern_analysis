@@ -39,11 +39,14 @@ class GroundTruth2D:
                                (y_camera - self.radial_lines[-1][1][1])**2)
         
     def generate_simple_terrain(self):
-        mid_start = self.num_of_pix // 2 - 50
-        mid_end = self.num_of_pix // 2 + 50
+        # mid_start = self.num_of_pix // 2 - 2
+        # mid_end = self.num_of_pix // 2 + 2
+        mid_end = self.num_of_pix
+        mid_start = self.num_of_pix - 8
+        print(mid_end, mid_start, self.num_of_pix)
         y_terrain = np.zeros(self.num_of_pix)
         # num of px ~ 330
-        y_terrain[50:100] = 3
+        y_terrain[mid_start:mid_end] = 3
         # y_terrain[300:320] = 2
         # y_terrain[150:200] = 4
 
@@ -53,6 +56,7 @@ class GroundTruth2D:
         for i in range(self.num_of_pix):
             self.terrain_points[i][0] = x_points[i]
             self.terrain_points[i][1] = y_terrain[i]
+            
     def _line_intersection(self, p1, p2, q1, q2):
         """
         Check the intersection of two line segments (p1-p2 and q1-q2).
@@ -90,7 +94,8 @@ class GroundTruth2D:
         intersections = []
         x_camera, y_camera = self.camera_position
 
-        for i, radial_line in enumerate(self.radial_lines):
+        # for i, radial_line in enumerate(self.radial_lines):
+        for i, radial_line in enumerate(reversed(self.radial_lines)):
             x1, y1 = radial_line[0]
             x2, y2 = radial_line[1]
             closest_distance = None
@@ -136,6 +141,15 @@ class GroundTruth2D:
             camera_x, camera_y = self.camera_position
             self.distances[i[0]] = np.sqrt((camera_x - i[1][0])**2 + (camera_y - i[1][1])**2)
         return self.distances
+    
+    def get_closest_points(self):
+        return np.array([list(cp) for cp in self.closest_points]).reshape((len(self.closest_points), 2))
+    
+    def get_ground_truth(self):
+        return self.terrain_points
+    
+    def get_seen_points(self):
+        return self.closest_points
 
     def get_depth_data(self):
         temp_array = []

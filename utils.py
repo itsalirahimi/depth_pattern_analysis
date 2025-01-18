@@ -2,8 +2,79 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
-def get_unit_vec(vec):
-    return vec / np.linalg.norm(vec)
+import math
+
+def calc_gep(angle, y_value, center=(0, 0)):
+    """
+    Calculate the intersection points of radial lines with a horizontal line (y = y_value).
+
+    Parameters:
+        angles (array): Array of angles (in radians) representing the directions.
+        y_value (float): The y-coordinate of the horizontal line.
+        center (tuple): The (x, z) coordinates of the center point.
+
+    Returns:
+        np.ndarray: A numpy array of intersection points [(x1, z1), (x2, z2), ...].
+    """
+    cx, cz = center  # Center point coordinates
+
+    # for angle in angles:
+    # Calculate direction vector components
+    dx = np.cos(angle)
+    dz = np.sin(angle)
+
+    # Scale factor to intersect at y = y_value
+    scale = (y_value-center[1]) / dz if dz != 0 else np.inf
+
+    # Calculate intersection point in the x-z plane
+    x_intersect = cx + dx * scale
+    z_intersect = cz + dz * scale
+
+    return np.array([x_intersect, z_intersect])
+
+
+
+def direction_from_angle_y(angle):
+    """
+    Calculate a 2D unit direction vector in the x-z plane 
+    based on an angle around the Y-axis.
+    
+    Parameters:
+        angle (float): Angle in radians.
+    
+    Returns:
+        tuple: A tuple representing the (x, z) direction vector.
+    """
+    x = math.cos(angle)
+    z = math.sin(angle)
+    return np.array([x, z])
+
+def unit_direction_vector(p1, p2):
+    """
+    Calculate the unit direction vector between two points in the x-z plane.
+    
+    Parameters:
+        p1 (tuple): The first point (x1, z1).
+        p2 (tuple): The second point (x2, z2).
+    
+    Returns:
+        tuple: A tuple representing the unit direction vector (dx, dz).
+    """
+    x1, z1 = p1
+    x2, z2 = p2
+    dx = x2 - x1
+    dz = z2 - z1
+    magnitude = math.sqrt(dx**2 + dz**2)
+    if magnitude == 0:
+        raise ValueError("The two points are identical; direction is undefined.")
+    return np.array([dx / magnitude, dz / magnitude])
+
+def get_unit_vec_of_vec(vec):
+    # print(vec)
+    ret = vec / np.linalg.norm(vec)
+    print(vec)
+    assert (not np.any(np.isnan(ret)))
+    return ret
 
 # def get_euc_dist(pt1, pt2):
 #     return np.sqrt((pt1[0]-pt2[0])**2 + (pt1[1]-pt2[1])**2 + (pt1[2]-pt2[2])**2)
@@ -39,7 +110,10 @@ def perform_tilt_correction_2d(start, raw_depth_points, gep_dists):
     max_gep_dist = np.max(gep_dists)
     tilt_corrected_depth_points = []
     for rdp, gepd in zip(raw_depth_points, gep_dists):
-        tilt_corrected_depth_points.append(list(np.array(rdp) + (max_gep_dist - gepd)*(get_unit_vec(np.array(rdp)-start))))
+        print(rdp)
+        data = list(np.array(rdp) + (max_gep_dist - gepd)*(get_unit_vec(np.array(rdp)-start)))
+        # print(get_unit_vec(np.array(rdp)-start), np.array(rdp), start)
+        tilt_corrected_depth_points.append(data)
     return tilt_corrected_depth_points
 
 from scipy.ndimage import zoom
