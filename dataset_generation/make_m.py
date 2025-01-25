@@ -3,13 +3,14 @@ import os
 import numpy as np
 import csv
 import time
-from lines import calcFlatGroundDepth
+from lines import calcFlatGroundDepth, expand_segments
+from sampl3d import scale_d_surface
 
 # List to store all rows of pixel data
-m_pixel_data = []
-h_pixel_data = []
-r_pixel_data = []
-f_pixel_data = []
+# m_pixel_data = []
+# h_pixel_data = []
+# r_pixel_data = []
+# f_pixel_data = []
 output_txt_file = "output_file_paths.txt"  # Path to save the filenames
 tilt_file = "/home/hamid/viot3/pm1states/camera_states.txt"
 
@@ -46,10 +47,14 @@ m_csv = 'mmat.csv'
 h_csv = 'hmat.csv'
 r_csv = 'rmat.csv'
 f_csv = 'fmat.csv'
+d_csv = 'dmat.csv'
+ddd_csv = 'dddmat.csv'
+rdd_csv = 'rddmat.csv'
 
 # Open the text file for appending the paths
 with open(m_csv, "a") as m_file, open(h_csv, "a") as h_file, open(r_csv, "a") as r_file, \
-    open(f_csv, "a") as f_file, open(output_txt_file, "w") as file:
+    open(f_csv, "a") as f_file, open(d_csv, "a") as d_file, open(ddd_csv, "a") as ddd_file, \
+    open(rdd_csv, "a") as rdd_file, open(output_txt_file, "w") as file:
     # Loop through the sorted filenames and process corresponding images
     for k, (file1, file2) in enumerate(zip(files1, files2)):
         # Check if the numeric part of the filenames match
@@ -67,18 +72,31 @@ with open(m_csv, "a") as m_file, open(h_csv, "a") as h_file, open(r_csv, "a") as
             # Read the image in grayscale (assuming monochrome images)
             depth = 255 - cv2.imread(image1_path, cv2.IMREAD_GRAYSCALE)
             gep_depth = calcFlatGroundDepth(np.float32(tlines[k].strip()))
-            residual = depth - gep_depth
+            h = scale_d_surface(depth, gep_depth)
+            residual = h - gep_depth
+            # hddot = compute_second_derivative(h)
+            # Compute the Laplacian (2nd derivative)
+            # ddepth = cv2.CV_64F ensures we avoid data truncation
+            res_lap = cv2.Laplacian(residual, ddepth=cv2.CV_64F, ksize=3)
+            depth_lap = cv2.Laplacian(depth, ddepth=cv2.CV_64F, ksize=3)
+            # Optionally normalize for visualization
+            # depth_lap_n = cv2.normalize(depth_lap, None, 0, 255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+            # res_lap_n = cv2.normalize(res_lap, None, 0, 255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+
             mask = cv2.imread(image2_path, cv2.IMREAD_GRAYSCALE)
             if depth.shape != mask.shape:
                 raise ValueError("The dimensions of depth and mask do not match.")
 
             ret, thresh1 = cv2.threshold(mask,230,255,cv2.THRESH_BINARY)        
+            # e_mask = expand_segments(depth_lap, thresh1, 10)
             # print(np.int32(thresh1[:, 32] > 0))
             # print(thresh1[:, 32] )
             
-            # cv2.imshow("ns", depth)
+            # cv2.imshow("d", depth)
             # cv2.imshow("res", residual)
-            # cv2.imshow("nsd", thresh1)
+            # cv2.imshow("ddd", depth_lap)
+            # cv2.imshow("mask", thresh1)
+            # cv2.imshow("expanded mask", e_mask)
             # cv2.waitKey()
             # time.sleep(100)
             # Flatten the image to a 1D array (each row of the image becomes a single row in the CSV)
@@ -87,10 +105,14 @@ with open(m_csv, "a") as m_file, open(h_csv, "a") as h_file, open(r_csv, "a") as
             # image[:, column_index]
             # Append this flattened image data as a row
             for c in range(depth.shape[1]):
+                # h_data = scale_d_surface(depth[:, c], gep_depth[:, c])
                 np.savetxt(m_file, [np.int32(thresh1[:, c] > 0)], delimiter=',', fmt='%d')
-                np.savetxt(h_file, [depth[:, c]], delimiter=',', fmt='%d')
+                np.savetxt(d_file, [depth[:, c]], delimiter=',', fmt='%d')
                 np.savetxt(r_file, [residual[:, c]], delimiter=',', fmt='%d')
                 np.savetxt(f_file, [gep_depth[:, c]], delimiter=',', fmt='%d')
+                np.savetxt(h_file, [h[:, c]], delimiter=',', fmt='%d')
+                np.savetxt(ddd_file, [depth_lap[:, c]], delimiter=',', fmt='%d')
+                np.savetxt(rdd_file, [res_lap[:, c]], delimiter=',', fmt='%d')
                 file.write(f"{image1_path}, {image2_path}\n")
 
 

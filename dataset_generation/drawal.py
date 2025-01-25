@@ -5,10 +5,13 @@ import matplotlib.pyplot as plt
 import random
 
 # Load the matrices from CSV files
+dmat = pd.read_csv('dmat.csv', header=None)
 hmat = pd.read_csv('hmat.csv', header=None)
 rmat = pd.read_csv('rmat.csv', header=None)
 mmat = pd.read_csv('mmat.csv', header=None)
 fmat = pd.read_csv('fmat.csv', header=None)
+dddmat = pd.read_csv('dddmat.csv', header=None)
+rddmat = pd.read_csv('rddmat.csv', header=None)
 output_txt_file = "output_file_paths.txt"
 
 
@@ -23,13 +26,17 @@ with open(output_txt_file, "r") as file:
 
 while True:
     # Randomly select a row index
-    random_row_index = np.random.randint(0, rmat.shape[0])
+    # random_row_index = np.random.randint(0, rmat.shape[0])
+    random_row_index = 44614
 
     # Extract the selected row from rmat and mmat
+    dmat_row = dmat.iloc[random_row_index]
     hmat_row = hmat.iloc[random_row_index]
     rmat_row = rmat.iloc[random_row_index]
     mmat_row = mmat.iloc[random_row_index]
     fmat_row = fmat.iloc[random_row_index]
+    dddmat_row = dddmat.iloc[random_row_index]
+    rddmat_row = rddmat.iloc[random_row_index]
 
     # Validate the row number
     if random_row_index < 1 or random_row_index > len(lines):
@@ -56,12 +63,32 @@ while True:
     plt.figure(figsize=(10, 6))
 
     # Iterate through the row to plot points based on mmat values
-    for i, (h_val, r_val, m_val, f_val) in enumerate(zip(hmat_row, rmat_row, mmat_row, fmat_row)):
-        colorh = 'red' if m_val == 1 else 'blue'
-        colorr = 'yellow' if m_val == 1 else 'green'
-        plt.scatter(i, h_val, color=colorh)
-        plt.scatter(i, r_val, color=colorr)
-        plt.scatter(i, f_val, color='black')
+    for i, (d_val, r_val, m_val, f_val, h_val, ddd_val, rdd_val) in \
+        enumerate(zip(dmat_row, rmat_row, mmat_row, fmat_row, hmat_row, dddmat_row, rddmat_row)):
+        # colord = 'red' if m_val == 1 else 'blue'
+        # colorr = 'yellow' if m_val == 1 else 'green'
+        # colorh = 'brown' if m_val == 1 else 'grey'
+        # plt.plot(i, h_val, color=colorh)
+        # plt.plot(i, d_val, color=colord)
+        # plt.plot(i, r_val, color=colorr)
+        # plt.plot(i, f_val, color='black')
+        if i > 0:
+            colord = 'red' if m_val == 1 else 'blue'
+            colorr = 'yellow' if m_val == 1 else 'green'
+            colorh = 'brown' if m_val == 1 else 'grey'
+            plt.plot([i-1, i], [last_h, h_val], color=colorh)
+            plt.plot([i-1, i], [last_d, d_val], color=colord)
+            plt.plot([i-1, i], [last_r, r_val], color=colorr)
+            plt.plot([i-1, i], [last_f, f_val], color='black')
+            plt.plot([i-1, i], [last_ddd, ddd_val], color='cyan')
+            plt.plot([i-1, i], [last_rdd, rdd_val], color='pink')
+        last_d = d_val
+        last_r = r_val
+        last_f = f_val
+        last_h = h_val
+        last_ddd = ddd_val
+        last_rdd = rdd_val
+        # plt.scatter(i, f_val, color='black')
 
     # Label the axes and add a title
     plt.xlabel('Index (Column Number)')
