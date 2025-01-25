@@ -89,7 +89,7 @@ plt.figure()
 ax2 = plt.gca()
 ax2.set_aspect('equal', adjustable='box')
 analyze(depth_data1, ax2, "real image")
-analyze(depth_data2, ax2, "gt", ground_truth_points)
+# analyze(depth_data2, ax2, "gt", ground_truth_points)
 
 
 # for pt in true_end_points:
