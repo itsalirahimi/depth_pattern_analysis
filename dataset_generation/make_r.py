@@ -4,7 +4,7 @@ import numpy as np
 import csv
 
 # Directory containing the .jpg files
-directory = '/home/hamid/thing/output'
+directory = '/home/hamid/viot3/output/put'
 
 # List to store all rows of pixel data
 all_pixel_data = []
@@ -13,6 +13,7 @@ all_pixel_data = []
 for filename in os.listdir(directory):
     if filename.endswith('.jpg'):
         image_path = os.path.join(directory, filename)
+        print("processing: ", image_path)
         
         # Read the image in grayscale (assuming monochrome images)
         image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -29,7 +30,7 @@ for filename in os.listdir(directory):
 all_pixel_data = np.array(all_pixel_data)
 
 # Define the output CSV file path
-output_csv = 'output.csv'
+output_csv = 'rmat.csv'
 
 # Save the numpy array to a CSV file
 np.savetxt(output_csv, all_pixel_data, delimiter=',', fmt='%d')
