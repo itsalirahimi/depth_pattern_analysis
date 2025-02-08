@@ -5,3 +5,6 @@ output/
 *.csv
 *.txt
 *#
+!dataset_generation/00000044.jpg
+!dataset_generation/dexinet.png
+!dataset_generation/test_mask.png
